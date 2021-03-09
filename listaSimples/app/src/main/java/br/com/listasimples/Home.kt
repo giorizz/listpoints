@@ -1,77 +1,60 @@
 package br.com.listasimples
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
-import android.widget.*
+import android.widget.ArrayAdapter
+import android.widget.ListView
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import io.paperdb.Paper
+import kotlin.collections.ArrayList
 
 
 class Home : AppCompatActivity() {
 
+    var mExampleList: ArrayList<PlayerGame> = ArrayList()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
+        Paper.init(this)
 
-        val username = intent.getStringExtra(ConstantsPlayers.USER_NAME)
-        val userpoints = intent.getIntExtra(ConstantsPlayers.USER_POINTS, 0)
+        val sharedPreferences: SharedPreferences = getPreferences(Context.MODE_PRIVATE)
 
-        println("AQUI O INTENT DOS DOIS $username e $userpoints")
 
+        //VARIAVEIS DOS NOMES
+        var username = intent.getStringExtra(ConstantsPlayers.USER_NAME)
+        var userpoints = intent.getStringExtra(ConstantsPlayers.USER_POINTS)
+
+        //AQUI O TEXTO DA TELA
         var texto_home = findViewById<TextView>(R.id.tv_score)
-
-        texto_home.text = "$username e tambem o $userpoints"
-
-        println("$intent")
+        texto_home.text = "${username.toString()} e tambem o ${userpoints.toString()}"
 
         val arrayAdapter: ArrayAdapter<*>
+        val listaPlayers: MutableList<PlayerGame> = mutableListOf()
 
-        val listaPlayers: MutableList<PlayerGame> = mutableListOf(
-            PlayerGame(
-                name = "Bah",
-                position = 12
-            ),
-            PlayerGame(
-                name = "Gi",
-                position = 43
-            ),
-            PlayerGame(
-                name = "Du",
-                position = 34
-            ),
-            PlayerGame(
-                name = "Pati",
-                position = 12
-            ),
-            PlayerGame(
-                name = "Julio",
-                position = 67
-            ),
-            PlayerGame(
-                name = "Mae",
-                position = 78
-            ),
-            PlayerGame(
-                name = "Dr",
-                position = 64
-            ), PlayerGame(
-                name = "Pri",
-                position = 12
-            )
-        )
-
-//        val jogadores = mutableListOf(
-//                player1, player2, player3, player4, player5, player6, player8, player7
-//        )
 
         listaPlayers.imprimeComMarcadores()
-
-        listaPlayers.add(
-            PlayerGame(
-                name = "Chucru",
-                position = 99
+        if (userpoints != null) {
+            listaPlayers.add(
+                PlayerGame(
+                    name = username.toString(),
+                    position = userpoints.toLong()
+                )
             )
-        )
-
+            saveData()
+        }
         listaPlayers.imprimeComMarcadores()
+
+        var listaGames: MutableList<String> = Paper.book().allKeys
+
+        println("LIST PLAYERS = $listaPlayers")
+
+        println("AQUI O LOAD DATA = ${loadData()}")
+
 
 
         val ordenadoPositions: List<PlayerGame> = listaPlayers.sorted().takeLast(5).reversed()
@@ -83,49 +66,91 @@ class Home : AppCompatActivity() {
 //            return jogadores[indice].name.toList()
 //        }
 
+
         var mListView = findViewById<ListView>(R.id.userlist)
+
         arrayAdapter = ArrayAdapter(
             this,
-            android.R.layout.simple_list_item_1, ordenadoPositions
+            android.R.layout.simple_list_item_1, listaPlayers
         )
+
         mListView.adapter = arrayAdapter
 
-
-//    fun maiores(jogadores: MutableList<PlayerGame>){
-//        for (indice in jogadores.indices) {
-//            var positions = jogadores[indice].name
-//            println("POSITIONS >>> $positions")
-//        }
-//    }
-
-
+//        println("ARRAYADAPTER DA listinhaaa >>>>> ${listinha!!.toList()}")
 
     }
 
-
-    fun addPlayers(): MutableList<PlayerGame> {
-        val players: MutableList<PlayerGame> = mutableListOf()
-
-
-        println("LISTA DOS GAMES" + players[0].name)
-        var zero = 0
-        for (i in players) {
-            println("ITEM " + zero + " " + players[zero].position)
-            zero++
-        }
-
-        return players
-
-    }
-
-
-    fun List<PlayerGame>.imprimeComMarcadores() {
+        fun List<PlayerGame>.imprimeComMarcadores() {
         val textoFormatado = this.joinToString(separator = "\n") {
             " ->    ${it.name} - ${it.position}"
         }
         println("##LISTA DE LIVROS## \n$textoFormatado\n")
     }
 
+    class StoreManager(_context: Context) {
+        private val editor: SharedPreferences.Editor
+        private val _context: Context
+        var pref: SharedPreferences
+        private val PRIVATE_MODE = 0
+        fun setToken(Token: String) {
+            editor.putString("Token", Token)
+            println("token saved $Token")
+            editor.commit()
+        }
+
+        val token: String?
+            get() = pref.getString("Token", "")
+
+        companion object {
+            private const val PREF_NAME = "_store"
+        }
+
+        init {
+            this._context = _context
+            pref = _context.getSharedPreferences(PREF_NAME, PRIVATE_MODE)
+            editor = pref.edit()
+        }
+    }
+
+    private fun loadData() {
+        val sharedPreferences: SharedPreferences =
+            getSharedPreferences("shared", Context.MODE_PRIVATE)
+        val gson = Gson()
+        val json = sharedPreferences.getString("task list", null)
+        val type = object : TypeToken<ArrayList<PlayerGame>>() {}.type
+
+        mExampleList = gson.fromJson(json, type)
+
+        if (mExampleList == null){
+            mExampleList = ArrayList()
+        }
+    }
+
+    fun saveData(){
+        val sharedPreferences: SharedPreferences = getSharedPreferences("shared", Context.MODE_PRIVATE)
+        val editor = sharedPreferences.edit()
+        val gson = Gson()
+        val json: String = gson.toJson(mExampleList)
+        editor.putString("task list", json)
+        editor.apply()
+        println("AQUI O SAVE $json")
+    }
 }
 
-//val salarios = mutableListOf<PlayerGame>//todo seguir com idle
+
+//fun addPlayers(): MutableList<PlayerGame> {
+//    val players: MutableList<PlayerGame> = mutableListOf()
+//
+//
+//    println("LISTA DOS GAMES" + players[0].name)
+//    var zero = 0
+//    for (i in players) {
+//        println("ITEM " + zero + " " + players[zero].position)
+//        zero++
+//    }
+//
+//    return players
+//
+//}
+
+

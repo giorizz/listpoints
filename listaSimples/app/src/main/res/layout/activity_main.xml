@@ -21,7 +21,7 @@
 
         <EditText
             android:hint="posicao"
-            android:id="@+id/position"
+            android:id="@+id/txt_pos"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="number" />
